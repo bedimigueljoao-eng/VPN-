@@ -1,0 +1,6 @@
+{
+  "name": "Internet Vault",
+  "description": "Plataforma Android de conectividade, gestão de VPN com servidores próprios e monitorização inteligente de redes móveis em Angola (Unitel e Africell).",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
