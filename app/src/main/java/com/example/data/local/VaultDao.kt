@@ -104,4 +104,29 @@ interface VaultDao {
 
     @Query("DELETE FROM usage_sessions")
     suspend fun clearUsageHistory()
+
+    // Laboratório de Conectividade
+    @Query("SELECT * FROM connectivity_lab_reports ORDER BY executedAtMillis DESC LIMIT 100")
+    fun observeLabReports(): Flow<List<ConnectivityLabReportEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertLabReport(report: ConnectivityLabReportEntity): Long
+
+    @Query("DELETE FROM connectivity_lab_reports")
+    suspend fun clearLabReports()
+
+    @Query("SELECT * FROM documented_services ORDER BY carrierType ASC, id ASC")
+    fun observeDocumentedServices(): Flow<List<DocumentedServiceEntity>>
+
+    @Query("SELECT * FROM documented_services WHERE carrierType = :carrierType ORDER BY id ASC")
+    suspend fun getDocumentedServicesByCarrier(carrierType: String): List<DocumentedServiceEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertDocumentedService(service: DocumentedServiceEntity): Long
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertDocumentedServices(services: List<DocumentedServiceEntity>)
+
+    @Query("DELETE FROM documented_services WHERE id = :id")
+    suspend fun deleteDocumentedServiceById(id: Long)
 }

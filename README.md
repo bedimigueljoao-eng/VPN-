@@ -18,5 +18,12 @@ Este repositório inclui um workflow automático (**GitHub Actions**) que compil
 ## Funcionalidades Principais
 - **Painel Principal:** Botão central animado para ligar/desligar a VPN, IP do túnel (`10.84.0.2`), cronómetro de sessão, velocidade de download/upload em tempo real e indicadores de 3 pilares (VPN activa, servidor disponível e acesso efectivo à internet).
 - **Módulo de Operadoras (Angola):** Detecção automática de rede e gestão dedicada para **Unitel Angola (`631-02`)** e **Africell Angola (`631-05`)**, fluxo de preparação em Wi-Fi para uso posterior em dados móveis e informação sobre conectividade patrocinada B2B (Zero-Rating).
+- **Laboratório de Conectividade Unitel & Africell:**
+  - **Testes Independentes por Operadora:** Matriz de conectividade de 9 verificações executada de forma independente para **Unitel (`631-02`)** e **Africell (`631-05`)** (rede móvel, dados móveis, internet pública, domínio oficial da operadora, servidor VPN configurado, serviços documentados/autorizados, DNS, validação Android e detecção de portal cativo).
+  - **Comparação Antes vs Depois da VPN:** Captura lado a lado de IP público antes/depois, estado do túnel `tun0`, latência ao servidor e à internet, pacotes encaminhados e consumo de dados.
+  - **Modo Sem Saldo / Sem Pacote:** Classificação rigorosa em 7 estados distintos sem classificar nenhuma ligação como gratuita sem evidência verificável e autorização oficial da operadora.
+  - **Registo de Serviços Documentados:** Catálogo local persistente de serviços autorizados/documentados por operadora com fonte, data de verificação, condições e estado de autorização.
+  - **Histórico & Exportação PDF/CSV:** Persistência local em Room com exportação nativa para **PDF** e **CSV** via Android SAF.
 - **Servidores Próprios & Cofre Offline:** Adição, edição, teste real de latência TCP, importação/exportação em JSON e persistência local via Room.
-- **Histórico & Diagnóstico:** Registo detalhado de sessões por operadora com gráfico comparativo e teste de diagnóstico completo em 4 etapas.
+- **Histórico & Diagnóstico:** Registo detalhado de sessões por operadora com gráfico comparativo e teste de diagnóstico completo.
+

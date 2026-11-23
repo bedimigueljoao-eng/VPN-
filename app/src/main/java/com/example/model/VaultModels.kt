@@ -113,6 +113,7 @@ data class NetworkProbeStatus(
     val serverLatencyMs: Long? = null,
     val hasEffectiveInternet: Boolean = false,
     val isNetworkValidated: Boolean = false,
+    val isCaptivePortal: Boolean = false,
     val transportType: TransportType = TransportType.NONE,
     val detectedCarrier: CarrierType = CarrierType.OTHER,
     val rawOperatorName: String = "Não detectado",
@@ -142,10 +143,120 @@ data class DiagnosticStepResult(
     val latencyMs: Long? = null
 )
 
+data class DestinationProbeResult(
+    val labelPt: String,
+    val host: String,
+    val port: Int,
+    val reachable: Boolean,
+    val latencyMs: Long?,
+    val categoryPt: String
+)
+
+data class VpnVerificationReport(
+    val transportSummaryPt: String,
+    val isCaptivePortal: Boolean,
+    val isValidated: Boolean,
+    val destinationResults: List<DestinationProbeResult>,
+    val vpnTunnelVerified: Boolean,
+    val tunPacketsCount: Long,
+    val publicIpObserved: String?,
+    val conclusionPt: String,
+    val executedAtMillis: Long
+)
+
 data class SponsoredPartnershipInfo(
     val carrier: CarrierType,
     val titlePt: String,
     val statusBadgePt: String,
     val mechanismPt: String,
     val technicalRequirementsPt: List<String>
+)
+
+enum class SimBalanceState(val labelPt: String, val shortTag: String) {
+    NO_BALANCE("Sem Saldo / Sem Pacote", "SEM SALDO"),
+    WITH_BALANCE("Com Saldo / Pacote Activo", "COM SALDO"),
+    UNKNOWN("Não Especificado", "NÃO ESPECIFICADO")
+}
+
+enum class ZeroBalanceClassification(
+    val titlePt: String,
+    val descriptionPt: String
+) {
+    NO_DATA_CONNECTION(
+        titlePt = "Sem ligação de dados",
+        descriptionPt = "Nenhuma interface de dados móveis ou transporte de rede está disponível no momento."
+    ),
+    MOBILE_ACTIVE_NO_VALIDATED_INTERNET(
+        titlePt = "Ligação móvel activa, mas sem internet validada",
+        descriptionPt = "A rede móvel está ligada ao nível de transporte, mas não há trânsito externo nem serviços acessíveis."
+    ),
+    LIMITED_TO_SPECIFIC_SERVICES(
+        titlePt = "Acesso limitado a serviços específicos",
+        descriptionPt = "A internet pública está bloqueada, mas um portal oficial da operadora ou serviço autorizado respondeu (provável Walled Garden). Isto não comprova gratuidade sem autorização oficial."
+    ),
+    PUBLIC_INTERNET_AVAILABLE(
+        titlePt = "Internet pública disponível",
+        descriptionPt = "Existe acesso aberto à internet pública pela ligação actual."
+    ),
+    VPN_SERVER_UNREACHABLE(
+        titlePt = "Servidor VPN inacessível",
+        descriptionPt = "Existe rede ou acesso parcial, mas o servidor VPN configurado não respondeu na porta indicada."
+    ),
+    VPN_SERVER_REACHABLE_NO_FORWARDING(
+        titlePt = "Servidor VPN acessível, mas sem encaminhamento funcional",
+        descriptionPt = "O servidor VPN responde ao handshake, mas o túnel TUN não está activo ou não há trânsito público validado pelo túnel."
+    ),
+    VPN_FUNCTIONAL(
+        titlePt = "Ligação VPN funcional",
+        descriptionPt = "O servidor VPN está acessível, a interface TUN está activa a processar pacotes e existe conectividade funcional."
+    )
+}
+
+data class ConnectivityMatrixItem(
+    val key: String,
+    val labelPt: String,
+    val statusPt: String,
+    val detailPt: String,
+    val passed: Boolean,
+    val latencyMs: Long? = null
+)
+
+data class LabVpnSnapshot(
+    val labelPt: String,
+    val capturedAtMillis: Long,
+    val carrierTested: CarrierType,
+    val vpnActive: Boolean,
+    val vpnIp: String?,
+    val publicIp: String?,
+    val serverHost: String,
+    val serverPort: Int,
+    val serverReachable: Boolean,
+    val serverLatencyMs: Long?,
+    val publicInternetReachable: Boolean,
+    val publicInternetLatencyMs: Long?,
+    val dataUsedBytes: Long,
+    val tunPackets: Long,
+    val errorDetailPt: String?
+)
+
+data class LabRunResult(
+    val carrierTested: CarrierType,
+    val detectedCarrier: CarrierType,
+    val detectedMccMnc: String,
+    val transportType: TransportType,
+    val balanceState: SimBalanceState,
+    val classification: ZeroBalanceClassification,
+    val matrixItems: List<ConnectivityMatrixItem>,
+    val destinationResults: List<DestinationProbeResult>,
+    val publicIpObserved: String?,
+    val vpnActive: Boolean,
+    val vpnIp: String?,
+    val serverName: String,
+    val serverHost: String,
+    val serverPort: Int,
+    val dataConsumedBytes: Long,
+    val errorMessagePt: String?,
+    val technicalConclusionPt: String,
+    val complianceNoticePt: String,
+    val executedAtMillis: Long
 )

@@ -4,6 +4,7 @@ import android.app.Application
 import com.example.data.local.UserPreferencesRepository
 import com.example.data.local.VaultDatabase
 import com.example.data.repository.VaultRepository
+import com.example.network.ConnectivityLabEngine
 import com.example.network.NetworkMonitor
 
 class InternetVaultApp : Application() {
@@ -17,6 +18,9 @@ class InternetVaultApp : Application() {
     lateinit var networkMonitor: NetworkMonitor
         private set
 
+    lateinit var labEngine: ConnectivityLabEngine
+        private set
+
     override fun onCreate() {
         super.onCreate()
         database = VaultDatabase.getInstance(this)
@@ -24,5 +28,6 @@ class InternetVaultApp : Application() {
         repository = VaultRepository(database.vaultDao(), prefsRepo)
         networkMonitor = NetworkMonitor(this)
         networkMonitor.startObserving()
+        labEngine = ConnectivityLabEngine(this, networkMonitor)
     }
 }

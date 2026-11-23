@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Handshake
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
+import androidx.compose.material.icons.filled.Science
 import androidx.compose.material.icons.filled.SignalCellularAlt
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Wifi
@@ -67,6 +68,7 @@ fun CarriersScreen(
     sponsoredPartnerships: List<SponsoredPartnershipInfo>,
     onSelectCarrierMode: (CarrierSelectionMode) -> Unit,
     onPrepareVaultOverWifi: () -> Unit,
+    onOpenConnectivityLab: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val net = uiState.networkStatus
@@ -144,6 +146,28 @@ fun CarriersScreen(
                                 value = net.localIpAddress,
                                 modifier = Modifier.weight(1f)
                             )
+                        }
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        Button(
+                            onClick = onOpenConnectivityLab,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = VaultElectricBlue,
+                                contentColor = VaultWhite
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .minimumInteractiveComponentSize()
+                                .testTag("carriers_open_lab_button")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Science,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Abrir Laboratório Unitel & Africell")
                         }
                     }
                 }

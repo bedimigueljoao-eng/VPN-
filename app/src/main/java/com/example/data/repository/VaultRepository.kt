@@ -171,4 +171,63 @@ class VaultRepository(
         }
         return count
     }
+
+    // Laboratório de Conectividade & Serviços Documentados
+    val labReportsFlow: Flow<List<com.example.data.local.ConnectivityLabReportEntity>> =
+        dao.observeLabReports()
+    val documentedServicesFlow: Flow<List<com.example.data.local.DocumentedServiceEntity>> =
+        dao.observeDocumentedServices()
+
+    suspend fun getDocumentedServicesByCarrier(carrierType: String) =
+        dao.getDocumentedServicesByCarrier(carrierType)
+
+    suspend fun saveLabReport(
+        result: com.example.model.LabRunResult,
+        beforeSnapshot: com.example.model.LabVpnSnapshot?,
+        afterSnapshot: com.example.model.LabVpnSnapshot?
+    ): Long {
+        val listType = com.squareup.moshi.Types.newParameterizedType(
+            List::class.java,
+            com.example.data.local.LabDestinationRecord::class.java
+        )
+        val adapter = moshi.adapter<List<com.example.data.local.LabDestinationRecord>>(listType)
+        val destRecords = result.destinationResults.map {
+            com.example.data.local.LabDestinationRecord(
+                labelPt = it.labelPt,
+                host = it.host,
+                port = it.port,
+                categoryPt = it.categoryPt,
+                reachable = it.reachable,
+                latencyMs = it.latencyMs
+            )
+        }
+
+        val summary = result.matrixItems.joinToString(" | ") { "${it.labelPt}: ${it.statusPt}" }
+        val entity = com.example.data.local.ConnectivityLabReportEntity(
+            carrierTested = result.carrierTested.displayName,
+            detectedMccMnc = result.detectedMccMnc,
+            transportType = result.transportType.labelPt,
+            balanceState = result.balanceState.labelPt,
+            classification = result.classification.name,
+            connectivitySummaryPt = summary,
+            destinationsJson = adapter.toJson(destRecords),
+            vpnActive = result.vpnActive,
+            vpnServerName = result.serverName,
+            vpnIp = result.vpnIp ?: "—",
+            publicIpBefore = beforeSnapshot?.publicIp ?: if (!result.vpnActive) (result.publicIpObserved ?: "—") else "—",
+            publicIpAfter = afterSnapshot?.publicIp ?: if (result.vpnActive) (result.publicIpObserved ?: "—") else "—",
+            dataConsumedBytes = result.dataConsumedBytes,
+            technicalConclusionPt = result.technicalConclusionPt,
+            executedAtMillis = result.executedAtMillis
+        )
+        return dao.insertLabReport(entity)
+    }
+
+    suspend fun clearLabReports() = dao.clearLabReports()
+
+    suspend fun addDocumentedService(service: com.example.data.local.DocumentedServiceEntity): Long =
+        dao.insertDocumentedService(service)
+
+    suspend fun deleteDocumentedService(id: Long) =
+        dao.deleteDocumentedServiceById(id)
 }

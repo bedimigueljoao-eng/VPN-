@@ -19,6 +19,7 @@ import com.example.model.SponsoredPartnershipInfo
 import com.example.model.TrafficTelemetry
 import com.example.model.TransportType
 import com.example.model.VpnConnectionState
+import com.example.model.VpnVerificationReport
 import com.example.ui.theme.ThemeMode
 import com.example.vpn.InternetVaultVpnService
 import com.example.vpn.VpnRuntimeState
@@ -44,6 +45,7 @@ data class VaultUiState(
     val carrierSummaries: List<CarrierUsageSummary> = emptyList(),
     val preferences: VaultPreferences = VaultPreferences(),
     val diagnosticSteps: List<DiagnosticStepResult> = emptyList(),
+    val verificationReport: VpnVerificationReport? = null,
     val isRunningDiagnostics: Boolean = false,
     val isPreparingVault: Boolean = false,
     val isTestingServers: Boolean = false,
@@ -62,6 +64,7 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
     private val networkMonitor = app.networkMonitor
 
     private val _diagnosticSteps = MutableStateFlow<List<DiagnosticStepResult>>(emptyList())
+    private val _verificationReport = MutableStateFlow<VpnVerificationReport?>(null)
     private val _isRunningDiagnostics = MutableStateFlow(false)
     private val _isPreparingVault = MutableStateFlow(false)
     private val _isTestingServers = MutableStateFlow(false)
@@ -72,12 +75,21 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
 
     private val extraFlagsFlow = combine(
         _diagnosticSteps,
+        _verificationReport,
         _isRunningDiagnostics,
         _isPreparingVault,
         _isTestingServers,
         _statusBanner
-    ) { steps, runningDiag, preparing, testing, banner ->
-        ExtraUiFlags(steps, runningDiag, preparing, testing, banner)
+    ) { values ->
+        @Suppress("UNCHECKED_CAST")
+        ExtraUiFlags(
+            diagnosticSteps = values[0] as List<DiagnosticStepResult>,
+            verificationReport = values[1] as VpnVerificationReport?,
+            isRunningDiagnostics = values[2] as Boolean,
+            isPreparingVault = values[3] as Boolean,
+            isTestingServers = values[4] as Boolean,
+            statusBannerMessage = values[5] as String?
+        )
     }
 
     private val coreDataFlow = combine(
@@ -113,6 +125,7 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
             carrierSummaries = histPrefs.second,
             preferences = histPrefs.third,
             diagnosticSteps = flags.diagnosticSteps,
+            verificationReport = flags.verificationReport,
             isRunningDiagnostics = flags.isRunningDiagnostics,
             isPreparingVault = flags.isPreparingVault,
             isTestingServers = flags.isTestingServers,
@@ -336,12 +349,25 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             _isRunningDiagnostics.value = true
             val server = repository.getSelectedServerOnce()
+            val serverName = server?.name ?: "Sem servidor"
+            val serverHost = server?.host ?: "1.1.1.1"
+            val serverPort = server?.port ?: 443
             val steps = networkMonitor.runFullDiagnostics(
-                serverName = server?.name ?: "Sem servidor",
-                serverHost = server?.host ?: "1.1.1.1",
-                serverPort = server?.port ?: 443
+                serverName = serverName,
+                serverHost = serverHost,
+                serverPort = serverPort
+            )
+            val isVpnRunning = VpnRuntimeState.connectionState.value is VpnConnectionState.Connected
+            val packets = VpnRuntimeState.telemetry.value.tunPacketsHandled
+            val report = networkMonitor.runAuthorizedConnectivityAudit(
+                serverName = serverName,
+                serverHost = serverHost,
+                serverPort = serverPort,
+                isVpnRunning = isVpnRunning,
+                tunPacketsHandled = packets
             )
             _diagnosticSteps.value = steps
+            _verificationReport.value = report
             _isRunningDiagnostics.value = false
         }
     }
@@ -397,6 +423,7 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
 
     private data class ExtraUiFlags(
         val diagnosticSteps: List<DiagnosticStepResult>,
+        val verificationReport: VpnVerificationReport?,
         val isRunningDiagnostics: Boolean,
         val isPreparingVault: Boolean,
         val isTestingServers: Boolean,

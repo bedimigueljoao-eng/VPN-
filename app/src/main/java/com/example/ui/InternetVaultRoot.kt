@@ -48,6 +48,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -55,6 +56,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.ui.screens.CarriersScreen
+import com.example.ui.screens.ConnectivityLabScreen
 import com.example.ui.screens.DashboardScreen
 import com.example.ui.screens.HistoryScreen
 import com.example.ui.screens.ServersScreen
@@ -62,6 +64,8 @@ import com.example.ui.screens.SettingsScreen
 import com.example.ui.theme.InternetVaultTheme
 import com.example.ui.theme.VaultElectricBlue
 import kotlinx.coroutines.launch
+
+private const val ROUTE_CONNECTIVITY_LAB = "connectivity_lab"
 
 private enum class VaultTab(
     val route: String,
@@ -110,6 +114,8 @@ private enum class VaultTab(
 @Composable
 fun InternetVaultRoot(viewModel: VaultViewModel) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val labViewModel: ConnectivityLabViewModel = viewModel()
+    val labState by labViewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
@@ -162,6 +168,38 @@ fun InternetVaultRoot(viewModel: VaultViewModel) {
         }
     }
 
+    val exportLabPdfLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/pdf")
+    ) { uri ->
+        if (uri != null) {
+            coroutineScope.launch {
+                runCatching {
+                    context.contentResolver.openOutputStream(uri)?.use { out ->
+                        labViewModel.exportReportsPdf(out, labState.labReports)
+                    } ?: error("OutputStream indisponível")
+                }.onFailure {
+                    snackbarHostState.showSnackbar("Erro ao exportar relatório PDF.")
+                }
+            }
+        }
+    }
+
+    val exportLabCsvLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("text/csv")
+    ) { uri ->
+        if (uri != null) {
+            coroutineScope.launch {
+                runCatching {
+                    context.contentResolver.openOutputStream(uri)?.use { out ->
+                        labViewModel.exportReportsCsv(out, labState.labReports)
+                    } ?: error("OutputStream indisponível")
+                }.onFailure {
+                    snackbarHostState.showSnackbar("Erro ao exportar relatório CSV.")
+                }
+            }
+        }
+    }
+
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
             when (event) {
@@ -172,6 +210,12 @@ fun InternetVaultRoot(viewModel: VaultViewModel) {
                     snackbarHostState.showSnackbar(event.message)
                 }
             }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        labViewModel.messages.collect { message ->
+            snackbarHostState.showSnackbar(message)
         }
     }
 
@@ -194,6 +238,7 @@ fun InternetVaultRoot(viewModel: VaultViewModel) {
     InternetVaultTheme(themeMode = uiState.preferences.themeMode) {
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val currentDestination = navBackStackEntry?.destination
+        val isLabRoute = currentDestination?.route == ROUTE_CONNECTIVITY_LAB
 
         val navigateToTab: (VaultTab) -> Unit = { tab ->
             navController.navigate(tab.route) {
@@ -205,6 +250,12 @@ fun InternetVaultRoot(viewModel: VaultViewModel) {
             }
         }
 
+        val openConnectivityLab: () -> Unit = {
+            navController.navigate(ROUTE_CONNECTIVITY_LAB) {
+                launchSingleTop = true
+            }
+        }
+
         BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
             val useNavigationRail = maxWidth >= 600.dp
 
@@ -212,7 +263,7 @@ fun InternetVaultRoot(viewModel: VaultViewModel) {
                 contentWindowInsets = WindowInsets.safeDrawing,
                 snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
                 bottomBar = {
-                    if (!useNavigationRail) {
+                    if (!useNavigationRail && !isLabRoute) {
                         NavigationBar(
                             modifier = Modifier.navigationBarsPadding(),
                             containerColor = MaterialTheme.colorScheme.surface,
@@ -254,7 +305,7 @@ fun InternetVaultRoot(viewModel: VaultViewModel) {
                         .fillMaxSize()
                         .padding(innerPadding)
                 ) {
-                    if (useNavigationRail) {
+                    if (useNavigationRail && !isLabRoute) {
                         NavigationRail(
                             containerColor = MaterialTheme.colorScheme.surface
                         ) {
@@ -295,7 +346,8 @@ fun InternetVaultRoot(viewModel: VaultViewModel) {
                                 onRefreshNetwork = { viewModel.probeSelectedServerAndInternet() },
                                 onNavigateToCarriers = { navigateToTab(VaultTab.CARRIERS) },
                                 onNavigateToServers = { navigateToTab(VaultTab.SERVERS) },
-                                onNavigateToHistory = { navigateToTab(VaultTab.HISTORY) }
+                                onNavigateToHistory = { navigateToTab(VaultTab.HISTORY) },
+                                onOpenConnectivityLab = openConnectivityLab
                             )
                         }
                         composable(VaultTab.CARRIERS.route) {
@@ -303,7 +355,8 @@ fun InternetVaultRoot(viewModel: VaultViewModel) {
                                 uiState = uiState,
                                 sponsoredPartnerships = viewModel.sponsoredPartnerships,
                                 onSelectCarrierMode = viewModel::selectCarrierMode,
-                                onPrepareVaultOverWifi = viewModel::prepareVaultOverWifi
+                                onPrepareVaultOverWifi = viewModel::prepareVaultOverWifi,
+                                onOpenConnectivityLab = openConnectivityLab
                             )
                         }
                         composable(VaultTab.SERVERS.route) {
@@ -332,10 +385,32 @@ fun InternetVaultRoot(viewModel: VaultViewModel) {
                             SettingsScreen(
                                 uiState = uiState,
                                 onRunDiagnostics = viewModel::runFullDiagnostics,
+                                onOpenConnectivityLab = openConnectivityLab,
                                 onSetThemeMode = viewModel::setThemeMode,
                                 onSetAutoPrepareWifi = viewModel::setAutoPrepareOnWifi,
                                 onSetDnsLeakGuard = viewModel::setDnsLeakGuard,
                                 onSetBypassLan = viewModel::setBypassLan
+                            )
+                        }
+                        composable(ROUTE_CONNECTIVITY_LAB) {
+                            ConnectivityLabScreen(
+                                uiState = labState,
+                                onBack = { navController.popBackStack() },
+                                onSelectCarrier = labViewModel::selectTargetCarrier,
+                                onSelectBalanceState = labViewModel::selectBalanceState,
+                                onRunTest = labViewModel::runConnectivityTest,
+                                onCaptureBeforeVpn = labViewModel::captureBeforeVpnSnapshot,
+                                onCaptureAfterVpn = labViewModel::captureAfterVpnSnapshot,
+                                onToggleVpn = handleConnectClick,
+                                onAddDocumentedService = labViewModel::addDocumentedService,
+                                onDeleteDocumentedService = labViewModel::deleteDocumentedService,
+                                onExportPdf = {
+                                    exportLabPdfLauncher.launch("internet_vault_relatorio_lab.pdf")
+                                },
+                                onExportCsv = {
+                                    exportLabCsvLauncher.launch("internet_vault_relatorio_lab.csv")
+                                },
+                                onClearHistory = labViewModel::clearLabReports
                             )
                         }
                     }

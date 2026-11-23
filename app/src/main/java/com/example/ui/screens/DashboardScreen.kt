@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Lan
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Science
 import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.material3.Icon
@@ -81,6 +82,7 @@ fun DashboardScreen(
     onNavigateToCarriers: () -> Unit,
     onNavigateToServers: () -> Unit,
     onNavigateToHistory: () -> Unit,
+    onOpenConnectivityLab: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val connState = uiState.connectionState
@@ -243,6 +245,61 @@ fun DashboardScreen(
                             .weight(1f)
                             .testTag("dashboard_server_card")
                     )
+                }
+            }
+
+            item {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .minimumInteractiveComponentSize()
+                        .clip(MaterialTheme.shapes.medium)
+                        .testTag("dashboard_open_lab_card")
+                        .clickable(onClick = onOpenConnectivityLab),
+                    shape = MaterialTheme.shapes.medium,
+                    color = MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(1.dp, VaultElectricBlue.copy(alpha = 0.45f)),
+                    tonalElevation = 1.dp
+                ) {
+                    Row(
+                        modifier = Modifier.padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(VaultElectricBlue.copy(alpha = 0.14f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Science,
+                                contentDescription = "Laboratório de Conectividade",
+                                tint = VaultElectricBlue
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Laboratório Unitel & Africell",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Matriz de 9 pontos, Modo Sem Saldo, Comparação VPN e PDF/CSV.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                            contentDescription = "Abrir Laboratório",
+                            tint = VaultElectricBlue
+                        )
+                    }
                 }
             }
 

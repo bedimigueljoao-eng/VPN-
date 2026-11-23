@@ -2,6 +2,7 @@ package com.example.data.local
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import com.squareup.moshi.JsonClass
 
 @Entity(tableName = "server_profiles")
 data class ServerProfileEntity(
@@ -40,6 +41,51 @@ data class UsageSessionEntity(
     val rxBytes: Long = 0L,
     val txBytes: Long = 0L,
     val status: String = "ACTIVA"
+)
+
+@Entity(tableName = "connectivity_lab_reports")
+data class ConnectivityLabReportEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0L,
+    val carrierTested: String,
+    val detectedMccMnc: String,
+    val transportType: String,
+    val balanceState: String,
+    val classification: String,
+    val connectivitySummaryPt: String,
+    val destinationsJson: String,
+    val vpnActive: Boolean,
+    val vpnServerName: String,
+    val vpnIp: String,
+    val publicIpBefore: String,
+    val publicIpAfter: String,
+    val dataConsumedBytes: Long,
+    val technicalConclusionPt: String,
+    val executedAtMillis: Long
+)
+
+@Entity(tableName = "documented_services")
+data class DocumentedServiceEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0L,
+    val carrierType: String,
+    val serviceName: String,
+    val domainOrHost: String,
+    val port: Int = 443,
+    val sourceReference: String,
+    val verifiedDate: String,
+    val conditionsPt: String,
+    val validityNotePt: String,
+    val isOfficiallyAuthorized: Boolean = false,
+    val isUserAdded: Boolean = true
+)
+
+@JsonClass(generateAdapter = true)
+data class LabDestinationRecord(
+    val labelPt: String,
+    val host: String,
+    val port: Int,
+    val categoryPt: String,
+    val reachable: Boolean,
+    val latencyMs: Long?
 )
 
 data class CarrierUsageSummary(

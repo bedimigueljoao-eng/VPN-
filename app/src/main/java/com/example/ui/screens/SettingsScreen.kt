@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.NetworkPing
 import androidx.compose.material.icons.filled.Policy
+import androidx.compose.material.icons.filled.Science
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -29,6 +30,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -40,19 +42,23 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.model.DiagnosticStepResult
+import com.example.model.VpnVerificationReport
 import com.example.ui.VaultUiState
 import com.example.ui.components.TechInfoCalloutCard
 import com.example.ui.theme.JetBrainsMonoFamily
 import com.example.ui.theme.ThemeMode
+import com.example.ui.theme.VaultAmber
 import com.example.ui.theme.VaultCoralRed
 import com.example.ui.theme.VaultElectricBlue
 import com.example.ui.theme.VaultEmerald
 import com.example.ui.theme.VaultWhite
+import com.example.util.FormatUtils
 
 @Composable
 fun SettingsScreen(
     uiState: VaultUiState,
     onRunDiagnostics: () -> Unit,
+    onOpenConnectivityLab: () -> Unit,
     onSetThemeMode: (ThemeMode) -> Unit,
     onSetAutoPrepareWifi: (Boolean) -> Unit,
     onSetDnsLeakGuard: (Boolean) -> Unit,
@@ -139,7 +145,29 @@ fun SettingsScreen(
                                 Text("Executar Diagnóstico Completo")
                             }
                         }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedButton(
+                            onClick = onOpenConnectivityLab,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .minimumInteractiveComponentSize()
+                                .testTag("settings_open_lab_button")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Science,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Abrir Laboratório Unitel & Africell (PDF/CSV)")
+                        }
                     }
+                }
+            }
+
+            if (uiState.verificationReport != null) {
+                item {
+                    ConnectivityAuditReportCard(report = uiState.verificationReport)
                 }
             }
 
@@ -259,6 +287,94 @@ fun SettingsScreen(
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ConnectivityAuditReportCard(report: VpnVerificationReport) {
+    Surface(
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, VaultElectricBlue.copy(alpha = 0.45f))
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "Relatório de Conectividade & Destinos Acessíveis",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "${report.transportSummaryPt} · ${FormatUtils.formatTimeShort(report.executedAtMillis)}",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+
+            val portalText = when {
+                report.isCaptivePortal -> "Portal Cativo / Walled Garden detectado"
+                report.isValidated -> "Rede validada para tráfego externo"
+                else -> "Sem validação de acesso aberto"
+            }
+            Text(
+                text = "Estado da Rede: $portalText",
+                style = MaterialTheme.typography.labelLarge,
+                color = if (report.isValidated) VaultEmerald else VaultAmber
+            )
+            Text(
+                text = "Túnel VPN (tun0): ${if (report.vpnTunnelVerified) "Activo (${report.tunPacketsCount} pacotes)" else "Inactivo"} · IP Público: ${report.publicIpObserved ?: "Indisponível"}",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+            HorizontalDivider()
+            Spacer(modifier = Modifier.height(8.dp))
+
+            report.destinationResults.forEach { dest ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = dest.labelPt,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "${dest.host}:${dest.port} · ${dest.categoryPt}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Text(
+                        text = if (dest.reachable) "Acessível (${dest.latencyMs ?: 0} ms)" else "Bloqueado",
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            fontFamily = JetBrainsMonoFamily,
+                            fontWeight = FontWeight.Bold
+                        ),
+                        color = if (dest.reachable) VaultEmerald else VaultCoralRed
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+            Surface(
+                shape = MaterialTheme.shapes.small,
+                color = VaultElectricBlue.copy(alpha = 0.08f)
+            ) {
+                Text(
+                    text = report.conclusionPt,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(10.dp)
+                )
             }
         }
     }
